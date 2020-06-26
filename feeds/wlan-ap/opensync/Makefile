@@ -22,24 +22,28 @@ define Package/opensync-ap2220
   $(call Package/opensync/default)
   TITLE += (AP2220)
   VARIANT:=AP2220
+  DEPENDS+=@TARGET_ipq40xx
 endef
 
 define Package/opensync-ecw5410
   $(call Package/opensync/default)
   TITLE += (ECW5410)
   VARIANT:=ECW5410
+  DEPENDS+=@TARGET_ipq806x
 endef
 
 define Package/opensync-ecw5211
   $(call Package/opensync/default)
   TITLE += (ECW5211)
   VARIANT:=ECW5211
+  DEPENDS+=@TARGET_ipq40xx
 endef
 
 define Package/opensync-ea8300
   $(call Package/opensync/default)
   TITLE += (EA8300)
   VARIANT:=IPQ40XX
+  DEPENDS+=@TARGET_ipq40xx
 endef
 
 define Package/opensync/description
