@@ -20,7 +20,7 @@
 })
 
 #define UCI_REMOVE(type, section, index, option) ({ \
-        if(!uci_remove(type, section, index, option)) \
+        if(uci_remove(type, section, index, option) != UCI_OK) \
         { \
             return false; \
         } \
@@ -76,9 +76,12 @@ int wifi_getRadioChannel(int radio_idx, int *channel);
 int wifi_getRadioEnable(int radio_idx, bool *enabled);
 int wifi_getRadioTxPower(int radio_idx, int *txpower );
 int wifi_getRadioBeaconInterval(int radio_idx, int *beacon_int);
-int wifi_getRadioFreqBand(int radio_idx, char *freq_band);
+int wifi_getRadioFreqBand(int *allowedChannels, int numberOfChannels, char *freq_band);
 int wifi_getRadioHtMode(int radio_idx, char *ht_mode);
 int wifi_getRadioHwMode(int radio_idx, char *hw_mode);
+int wifi_getTxChainMask(int radioIndex, int *txChainMask);
+int wifi_getRadioAllowedChannel(int radioIndex, int *allowedChannelList, int *allowedChannelListLen);
+int wifi_getRadioMacaddress(int radio_idx, char *mac);
 
 /*
  *  Functions to set Radio parameters
@@ -101,10 +104,12 @@ int wifi_getSsidEnabled(int ssid_index, bool *enabled);
 int wifi_getApBridgeInfo(int ssid_index, char *bridge_info, char *tmp1, char *tmp2, size_t bridge_info_len);
 int wifi_getApIsolationEnable(int ssid_index, bool *enabled);
 int wifi_getApSsidAdvertisementEnable(int ssid_index, bool *enabled);
-int wifi_getBaseBSSID(int ssid_index,char *buf, size_t buf_len);
+int wifi_getBaseBSSID(int ssid_index,char *buf, size_t buf_len,int radio_idx);
 int wifi_getApSecurityKeyPassphrase(int ssid_index, char *buf, size_t buf_len);
 bool wifi_getApSecurityModeEnabled(int ssid_index, char *buf, size_t buf_len);
 bool wifi_getApSecurityRadiusServer(int ssid_index, char *radius_ip, char *radius_port, char *radius_secret);
+bool wifi_setFtMode(int ssid_index, const struct schema_Wifi_VIF_Config *vconf);
+bool wifi_getApVlanId(int ssidIndex, int *vlan_id);
 
 /*
  *  Functions to set SSID parameters
@@ -114,6 +119,8 @@ bool wifi_setApSecurityModeEnabled(int ssid_index, const struct schema_Wifi_VIF_
 bool wifi_setApSsidAdvertisementEnable(int ssid_index, bool enabled);
 bool wifi_setApIsolationEnable(int ssid_index, bool enabled);
 bool wifi_setSsidEnabled(int ssid_index, bool enabled);
+bool wifi_setApBridgeInfo(int ssid_index, char *bridge_info);
+bool wifi_setApVlanNetwork(int ssid_index, int vlan_id);
 
 /*
  * Functions to access OVSDB callbacks

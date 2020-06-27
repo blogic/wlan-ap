@@ -36,6 +36,7 @@ static bool needReset = true;  /* On start-up, we need to initialize DB from  th
 static struct target_radio_ops g_rops;
 static bool g_resync_ongoing = false;
 
+
 static bool radio_state_get(
         int radioIndex,
         struct schema_Wifi_Radio_State *rstate)
@@ -104,10 +105,16 @@ static bool radio_state_get(
     rstate->freq_band_exists = true;
     rstate->hw_mode_exists = true;
 #endif
- 
-    if (UCI_OK == wifi_getRadioFreqBand(radioIndex, rstate->freq_band)) {
+    wifi_getRadioAllowedChannel(radioIndex, rstate->allowed_channels, &(rstate->allowed_channels_len));
+
+    if (UCI_OK == wifi_getRadioFreqBand(rstate->allowed_channels, rstate->allowed_channels_len, rstate->freq_band)) {
 	rstate->freq_band_exists = true;
         LOGN("radio freq band: %s", rstate->freq_band);
+    }
+
+    if(wifi_getTxChainMask(radioIndex, &(rstate->tx_chainmask))) {
+	rstate->tx_chainmask_exists = true;
+        LOGN("tx_chainmask: %d", rstate->tx_chainmask);
     }
 
     if (UCI_OK == wifi_getRadioHtMode(radioIndex, rstate->ht_mode)) {
@@ -119,7 +126,10 @@ static bool radio_state_get(
         rstate->hw_mode_exists = true;
         LOGN("radio hw mode: %s", rstate->hw_mode);
     }
-
+    if(UCI_OK == wifi_getRadioMacaddress(radioIndex, rstate->mac)){
+        rstate->mac_exists = true;
+        LOGN("radio mac address:%s", rstate->mac);
+    }
     snprintf(rstate->country, sizeof(rstate->country),"CA");
     rstate->country_exists = true;
 
@@ -298,17 +308,7 @@ bool target_radio_config_init2()
     struct schema_Wifi_Radio_Config rconfig;
     struct schema_Wifi_Radio_State  rstate;
 
-    target_map_init();
-
-    //Radio mappings
-    target_map_insert("wifi0", "radio1");
-    target_map_insert("wifi1", "radio2");
-    target_map_insert("wifi2", "radio0");
-
-    //VIF mappings
-    target_map_insert("home-ap-u50", "default_radio0");
-    target_map_insert("home-ap-24", "default_radio1");
-    target_map_insert("home-ap-l50", "default_radio2");
+    target_ifname_map_init();
 
 #if 1
     ret = wifi_getRadioNumberOfEntries(&rnum);

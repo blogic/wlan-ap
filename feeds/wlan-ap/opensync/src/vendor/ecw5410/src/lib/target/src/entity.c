@@ -27,6 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdbool.h>
 #include <string.h>
 #include <target.h>
+#include <os_types.h>
+#include <os_nif.h>
 #include "log.h"
 
 /* devinfo is /dev/mtd9 for ECW5410*/
@@ -36,6 +38,72 @@ static char devInfoModelNumber[DEV_INFO_RECORD_SZ];
 static char devInfoSerialNumber[DEV_INFO_RECORD_SZ];
 static bool devInfoModelNumber_saved = false;
 static bool devInfoSerialNumber_saved = false;
+
+typedef struct
+{
+    char     *cloud_ifname;
+    char     *iw_ifname;
+    char     *iw_phyname;
+} ifmap_t;
+
+ifmap_t stats_ifmap[] = {
+    { "home-ap-24",    "wlan1",    "phy1" },
+    { "home-ap-u50",   "wlan0",    "phy0" },
+    { NULL,             NULL,       NULL  }
+};
+
+void target_ifname_map_init()
+{
+    target_map_init();
+
+    //Radio mappings
+    target_map_insert("wifi0", "radio1");
+    target_map_insert("wifi1", "radio2");
+    target_map_insert("wifi2", "radio0");
+
+    //VIF mappings
+    target_map_insert("home-ap-u50", "default_radio0");
+    target_map_insert("home-ap-24", "default_radio1");
+    target_map_insert("home-ap-l50", "default_radio2");
+}
+
+bool target_map_cloud_to_iw(const char *ifname, char *iw_name, size_t length)
+{
+    ifmap_t     *mp;
+
+    mp = stats_ifmap;
+    while (mp->cloud_ifname)
+    {
+        if (!strcmp(mp->cloud_ifname, ifname))
+        {
+            strscpy(iw_name, mp->iw_ifname, length);
+            return true;
+        }
+
+        mp++;
+    }
+
+    return false;
+}
+
+bool target_map_cloud_to_phy(const char *ifname, char *phy_name, size_t length)
+{
+    ifmap_t     *mp;
+
+    mp = stats_ifmap;
+    while (mp->cloud_ifname)
+    {
+        if (!strcmp(mp->cloud_ifname, ifname))
+        {
+            strscpy(phy_name, mp->iw_phyname, length);
+            return true;
+        }
+
+        mp++;
+    }
+
+    return false;
+}
 
 char *get_devinfo_record( char * tag, char * payload, size_t payloadsz )
 {
@@ -91,9 +159,29 @@ bool target_model_get(void *buff, size_t buffsz)
 
 bool target_serial_get(void *buff, size_t buffsz)
 {
+    os_macaddr_t mac;
+    char mac_buff[TARGET_BUFF_SZ];
+    int n;
+
     if (!devInfoSerialNumber_saved)  {
         if ( NULL == get_devinfo_record( "serial_number=", devInfoSerialNumber, DEV_INFO_RECORD_SZ))
+        {
+            if (true == os_nif_macaddr("eth0", &mac))
+            {
+                memset(mac_buff, 0, sizeof(mac_buff));
+                n = snprintf(mac_buff, sizeof(mac_buff), PRI(os_macaddr_plain_t), FMT(os_macaddr_t, mac));
+                if (n == OS_MACSTR_PLAIN_SZ) {
+                    LOG(ERR, "buffer not large enough");
+                    return false;
+                }
+                strncpy(devInfoSerialNumber, mac_buff, buffsz);
+            }
+        }
+        else
+        {
             snprintf(devInfoSerialNumber, DEV_INFO_RECORD_SZ, "%s", "ECW5410-TIP-01");
+        }
+
         devInfoSerialNumber_saved = true;
     }
     strncpy(buff, devInfoSerialNumber, buffsz);
@@ -113,3 +201,4 @@ bool target_platform_version_get(void *buff, size_t buffsz)
 
     return true;
 }
+
